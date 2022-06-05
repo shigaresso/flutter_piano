@@ -1,7 +1,7 @@
-import 'dart:math';
-
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_piano/correct_sound_holder.dart';
+import 'package:flutter_piano/widget/empty_appbar.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key, required this.title}) : super(key: key);
@@ -13,95 +13,121 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  final AudioCache _player = AudioCache();
   final CorrectSoundHolder _correctSoundHolder =
-      CorrectSoundHolder(numberOfScale: 7);
+      CorrectSoundHolder(numberOfScale: numberOfScales.length);
+  static final numberOfScales = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
-  void _incrementCounter() {
+  int nowCorrectAnswer = 0;
+  int maxCorrectAnswer = 0;
+
+  void incrementCounter(int sound, var scale) async {
+    final isJudge = _correctSoundHolder.judgeSelectSound(sound);
+    // 大文字を小文字化 これは、ファイル名に大文字を使ってはいけないが表示には大文字を用いたいので
+    _player.play('sounds/${scale.toLowerCase()}.wav');
     setState(() {
-      _counter++;
+      nowCorrectAnswer = _correctSoundHolder.now;
+      maxCorrectAnswer = _correctSoundHolder.max;
     });
+    if (isJudge) {
+      await Future.delayed(
+        const Duration(milliseconds: 400),
+      );
+      _player.play(
+          'sounds/${numberOfScales[_correctSoundHolder.nowScale].toLowerCase()}.wav');
+    } else {
+      _player.play('sounds/wrong_answer.mp3');
+    }
   }
-
-  void _newScale() {}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
+      appBar: EmptyAppBar(),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            ElevatedButton(
-              onPressed: () {
-                print('もう一度鳴らす');
-                print(_correctSoundHolder.nowScale);
-              },
-              child: Text('もう一度鳴らす'),
+            Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Text(
+                  '連続正解数：$nowCorrectAnswer',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 30,
+                  ),
+                ),
+                Text(
+                  '最大正解数：$maxCorrectAnswer',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 30,
+                  ),
+                ),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () {
-                print('C');
-                print(_correctSoundHolder.judgeSelectSound(0));
-              },
-              child: Text('C'),
+            Container(
+              height: 20,
             ),
-            ElevatedButton(
-              onPressed: () {
-                print('D');
-                print(_correctSoundHolder.judgeSelectSound(1));
-              },
-              child: Text('D'),
+            SizedBox(
+              width: 400,
+              height: 100,
+              child: ElevatedButton(
+                onPressed: () {
+                  _player.play(
+                      'sounds/${numberOfScales[_correctSoundHolder.nowScale].toLowerCase()}.wav');
+                  print('答えは:${_correctSoundHolder.nowScale} もう一度鳴らす');
+                },
+                child: const Text('もう一度鳴らす'),
+              ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                print('E');
-                print(_correctSoundHolder.judgeSelectSound(2));
-              },
-              child: Text('E'),
+            Container(
+              height: 20,
             ),
-            ElevatedButton(
-              onPressed: () {
-                print('F');
-                print(_correctSoundHolder.judgeSelectSound(3));
-              },
-              child: Text('F'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                for (int i = 0; i < numberOfScales.length; i++)
+                  SoundWidget(
+                      text: numberOfScales[i],
+                      number: i,
+                      onTap: incrementCounter),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () {
-                print('G');
-                print(_correctSoundHolder.judgeSelectSound(4));
-              },
-              child: Text('G'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                print('A');
-                print(_correctSoundHolder.judgeSelectSound(5));
-              },
-              child: Text('A'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                print('B');
-                print(_correctSoundHolder.judgeSelectSound(6));
-              },
-              child: Text('B'),
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
+            SizedBox(height: 10),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+    );
+  }
+}
+
+class SoundWidget extends StatelessWidget {
+  final String text;
+  final int number;
+  final Function _opTap;
+
+  SoundWidget({
+    Key? key,
+    required this.text,
+    required this.number,
+    required Function onTap,
+  })  : _opTap = onTap,
+        super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 200,
+      width: 90,
+      child: ElevatedButton(
+        onPressed: () {
+          print(text);
+          _opTap(number, text);
+        },
+        child: Text(text),
       ),
     );
   }
