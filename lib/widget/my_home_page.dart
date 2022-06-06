@@ -13,9 +13,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final AudioCache _player = AudioCache();
-  final CorrectSoundHolder _correctSoundHolder =
-      CorrectSoundHolder(numberOfScale: numberOfScales.length);
+  late final AudioCache _player;
+  late final CorrectSoundHolder _correctSoundHolder;
   static final numberOfScales = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 
   int nowCorrectAnswer = 0;
@@ -23,25 +22,52 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void incrementCounter(int sound, var scale) async {
     final isJudge = _correctSoundHolder.judgeSelectSound(sound);
+
     // 大文字を小文字化 これは、ファイル名に大文字を使ってはいけないが表示には大文字を用いたいので
     _player.play('sounds/${scale.toLowerCase()}.wav');
     setState(() {
       nowCorrectAnswer = _correctSoundHolder.now;
       maxCorrectAnswer = _correctSoundHolder.max;
     });
-    if (isJudge) {
-      await Future.delayed(
-        const Duration(milliseconds: 400),
-      );
-      _player.play(
-          'sounds/${numberOfScales[_correctSoundHolder.nowScale].toLowerCase()}.wav');
-    } else {
+    if (!isJudge) {
       _player.play('sounds/wrong_answer.mp3');
+      return;
     }
+    await Future.delayed(const Duration(milliseconds: 400));
+    _player.play(
+        'sounds/${numberOfScales[_correctSoundHolder.nowScale].toLowerCase()}.wav');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioCache();
+    _player.loadAll([
+      'c.wav',
+      'd.wav',
+      'e.wav',
+      'f.wav',
+      'g.wav',
+      'a.wav',
+      'b.wav',
+      'wrong_answer.mp3'
+    ]);
+
+    // 起動した時に、最初に当てる音を鳴らしたいのでここでイニシャライズ
+    _correctSoundHolder =
+        CorrectSoundHolder(numberOfScale: numberOfScales.length);
+    _player.play(
+        'sounds/${numberOfScales[_correctSoundHolder.nowScale].toLowerCase()}.wav');
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final kTextStyle = TextStyle(
+      fontWeight: FontWeight.bold,
+      fontSize: size.width / 16,
+    );
+
     return Scaffold(
       appBar: EmptyAppBar(),
       body: Center(
@@ -54,25 +80,17 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 Text(
                   '連続正解数：$nowCorrectAnswer',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
-                  ),
+                  style: kTextStyle,
                 ),
                 Text(
                   '最大正解数：$maxCorrectAnswer',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
-                  ),
+                  style: kTextStyle,
                 ),
               ],
             ),
-            Container(
-              height: 20,
-            ),
+            Container(height: 20),
             SizedBox(
-              width: 400,
+              width: size.width / 2,
               height: 100,
               child: ElevatedButton(
                 onPressed: () {
@@ -83,9 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 child: const Text('もう一度鳴らす'),
               ),
             ),
-            Container(
-              height: 20,
-            ),
+            Container(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -96,7 +112,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       onTap: incrementCounter),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
           ],
         ),
       ),
@@ -109,7 +125,7 @@ class SoundWidget extends StatelessWidget {
   final int number;
   final Function _opTap;
 
-  SoundWidget({
+  const SoundWidget({
     Key? key,
     required this.text,
     required this.number,
@@ -119,9 +135,13 @@ class SoundWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 200,
-      width: 90,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: 70,
+        maxHeight: 900,
+        minWidth: 5,
+        maxWidth: 50,
+      ),
       child: ElevatedButton(
         onPressed: () {
           print(text);
